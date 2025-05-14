@@ -9,11 +9,13 @@ export default function Login() {
 
     const handleLogin = () => {
         if (email === "admin" && password === "admin") {
+            localStorage.setItem("isLoggedIn", "true"); // ✅ Set login flag
             navigate("/dashboard");
         } else {
             alert("Invalid credentials");
         }
     };
+    
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
