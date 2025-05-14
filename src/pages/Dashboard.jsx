@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import StudentModal from "../components/StudentModal";
 import StudentEditModal from "../components/StudentEditModal";
 import DownloadExcelButton from "../components/DownloadExcelButton";
+import LogoutButton from "../components/LogoutButton";
 
 export default function Dashboard() {
     const [students, setStudents] = useState([]);
@@ -50,6 +51,7 @@ export default function Dashboard() {
                 </button>
 
                 <DownloadExcelButton data={students} />
+                <LogoutButton />
             </div>
 
             <div className="overflow-x-auto bg-white shadow rounded">

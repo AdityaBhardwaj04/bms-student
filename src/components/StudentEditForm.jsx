@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { db } from "../firebase";
+import { db, storage } from "../firebase";
 import { doc, updateDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 export default function StudentEditForm({ student, onClose, onSubmitSuccess }) {
     const [form, setForm] = useState(student || {});
+    const [image, setImage] = useState(null);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         setForm(student);
@@ -14,11 +17,27 @@ export default function StudentEditForm({ student, onClose, onSubmitSuccess }) {
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) setImage(file);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const ref = doc(db, "students", student.id);
-            await updateDoc(ref, form);
+            const refDoc = doc(db, "students", student.id);
+            let updatedData = { ...form };
+
+            if (image) {
+                setUploading(true);
+                const storageRef = ref(storage, `students/${student.id}`);
+                await uploadBytes(storageRef, image);
+                const downloadURL = await getDownloadURL(storageRef);
+                updatedData.photoUrl = downloadURL;
+                setUploading(false);
+            }
+
+            await updateDoc(refDoc, updatedData);
             alert("Student updated successfully!");
             onSubmitSuccess?.();
             onClose?.();
@@ -64,7 +83,6 @@ export default function StudentEditForm({ student, onClose, onSubmitSuccess }) {
                     type="date"
                     value={form.dob || ""}
                     onChange={handleChange}
-                    placeholder="DOB"
                 />
                 <input
                     className="p-2 border rounded"
@@ -103,11 +121,33 @@ export default function StudentEditForm({ student, onClose, onSubmitSuccess }) {
                     placeholder="Mother's Mobile"
                 />
             </div>
+
+            <div>
+                <label className="block mb-1 font-medium">
+                    Upload Student Image
+                </label>
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                />
+                {form.photoUrl && (
+                    <img
+                        src={form.photoUrl}
+                        alt="Current"
+                        className="mt-2 w-24 h-24 object-cover rounded"
+                    />
+                )}
+            </div>
+
             <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 w-full rounded hover:bg-blue-700"
+                disabled={uploading}
+                className={`w-full px-4 py-2 text-white rounded ${
+                    uploading ? "bg-gray-500" : "bg-blue-600 hover:bg-blue-700"
+                }`}
             >
-                Update Student
+                {uploading ? "Updating..." : "Update Student"}
             </button>
         </form>
     );

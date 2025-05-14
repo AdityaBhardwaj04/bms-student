@@ -1,21 +1,45 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+    GoogleAuthProvider,
+    signInWithPopup,
+    onAuthStateChanged,
+} from "firebase/auth";
 import { LockClosedIcon } from "@heroicons/react/20/solid";
+import { auth } from "../firebase"; // Make sure auth is exported from firebase.js
+
+// Only these emails will be allowed access
+const ALLOWED_EMAILS = ["pbrightminds@gmail.com"];
 
 export default function Login() {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
     const navigate = useNavigate();
 
-    const handleLogin = () => {
-        if (email === "admin" && password === "admin") {
-            localStorage.setItem("isLoggedIn", "true"); // ✅ Set login flag
-            navigate("/dashboard");
-        } else {
-            alert("Invalid credentials");
+    const handleGoogleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const userEmail = result.user.email;
+
+            if (ALLOWED_EMAILS.includes(userEmail)) {
+                navigate("/dashboard");
+            } else {
+                alert("Access Denied: You are not authorized.");
+                await auth.signOut();
+            }
+        } catch (error) {
+            alert("Login failed: " + error.message);
         }
     };
-    
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user && ALLOWED_EMAILS.includes(user.email)) {
+                navigate("/landing-page");
+            }
+        });
+
+        return () => unsubscribe();
+    }, [navigate]);
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -28,58 +52,17 @@ export default function Login() {
                         Student Data Manager
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600">
-                        Login to access your dashboard
+                        Login using your school admin Google account
                     </p>
                 </div>
 
                 <div className="mt-8 bg-white py-8 px-6 shadow rounded-lg">
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="admin@school.edu"
-                        />
-                    </div>
-
-                    <div className="mb-4">
-                        <label className="block text-sm font-medium text-gray-700">
-                            Password
-                        </label>
-                        <div className="flex justify-between items-center">
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="••••••••"
-                            />
-                            <a
-                                href="#"
-                                className="text-sm text-blue-600 hover:underline ml-2"
-                            >
-                                Forgot password?
-                            </a>
-                        </div>
-                    </div>
-
                     <button
-                        onClick={handleLogin}
+                        onClick={handleGoogleLogin}
                         className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md shadow"
                     >
-                        Log In
+                        Sign in with Google
                     </button>
-
-                    <p className="mt-4 text-center text-sm text-gray-600">
-                        Don't have an account?{" "}
-                        <a href="#" className="text-blue-600 hover:underline">
-                            Contact administrator
-                        </a>
-                    </p>
                 </div>
             </div>
         </div>

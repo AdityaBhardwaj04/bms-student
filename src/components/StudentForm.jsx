@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { db } from "../firebase";
+import { db, storage } from "../firebase";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { v4 as uuidv4 } from "uuid";
 
 export default function StudentForm({ onSubmitSuccess, onClose }) {
     const [form, setForm] = useState({
@@ -18,6 +20,9 @@ export default function StudentForm({ onSubmitSuccess, onClose }) {
         enrolmentDate: new Date().toISOString(),
     });
 
+    const [imageFile, setImageFile] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
@@ -25,9 +30,10 @@ export default function StudentForm({ onSubmitSuccess, onClose }) {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setUploading(true);
 
         try {
-            // 🔍 Check if student already exists
+            // Check if student already exists
             const q = query(
                 collection(db, "students"),
                 where("name", "==", form.name),
@@ -38,17 +44,29 @@ export default function StudentForm({ onSubmitSuccess, onClose }) {
             const existing = await getDocs(q);
             if (!existing.empty) {
                 alert("Student already exists with the same parent names.");
+                setUploading(false);
                 return;
             }
 
-            // ✅ Proceed to add student
-            await addDoc(collection(db, "students"), form);
-            alert("Student added successfully!");
+            // Upload image if selected
+            let photoUrl = "";
+            if (imageFile) {
+                const imageRef = ref(storage, `students/${uuidv4()}`);
+                await uploadBytes(imageRef, imageFile);
+                photoUrl = await getDownloadURL(imageRef);
+            }
 
+            // Add to Firestore
+            await addDoc(collection(db, "students"), {
+                ...form,
+                photoUrl,
+            });
+
+            alert("Student added successfully!");
             if (onSubmitSuccess) onSubmitSuccess();
             if (onClose) onClose();
 
-            // Reset form
+            // Reset
             setForm({
                 name: "",
                 class: "",
@@ -60,10 +78,15 @@ export default function StudentForm({ onSubmitSuccess, onClose }) {
                 motherName: "",
                 fatherMobile: "",
                 motherMobile: "",
+                enrolled: true,
+                enrolmentDate: new Date().toISOString(),
             });
+            setImageFile(null);
         } catch (error) {
             alert("Error adding student: " + error.message);
         }
+
+        setUploading(false);
     };
 
     return (
@@ -149,12 +172,26 @@ export default function StudentForm({ onSubmitSuccess, onClose }) {
                     onChange={handleChange}
                     className="p-2 border rounded"
                 />
+
+                <div className="col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Upload Student Picture
+                    </label>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setImageFile(e.target.files[0])}
+                        className="p-2 border rounded w-full"
+                    />
+                </div>
             </div>
+
             <button
                 type="submit"
+                disabled={uploading}
                 className="bg-green-600 text-white px-4 py-2 w-full rounded hover:bg-green-700"
             >
-                Add Student
+                {uploading ? "Uploading..." : "Add Student"}
             </button>
         </form>
     );
