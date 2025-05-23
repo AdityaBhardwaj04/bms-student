@@ -9,7 +9,7 @@ import { LockClosedIcon } from "@heroicons/react/20/solid";
 import { auth } from "../firebase"; // Make sure auth is exported from firebase.js
 
 // Only these emails will be allowed access
-const ALLOWED_EMAILS = ["pbrightminds@gmail.com"];
+const ALLOWED_EMAILS = ["pbrightminds@gmail.com","krrina70@gmail.com"];
 
 export default function Login() {
     const navigate = useNavigate();
